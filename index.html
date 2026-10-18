@@ -220,7 +220,7 @@ $('vGo').onclick = async () => {
 function startScan() {
   if (scanner) return;
   scanner = new Html5Qrcode('reader', { formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE], experimentalFeatures: { useBarCodeDetectorIfSupported: true }, verbose: false });
-  scanner.start({ facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 }, advanced: [{ focusMode: 'continuous' }] }, { fps: 25, disableFlip: true }, txt => lookup(txt), () => {}).catch(() => { $('reader').innerHTML = '<div class="msg err">Camera not available. Type the code below.</div>'; scanner = null; });
+  scanner.start({ facingMode: 'environment' }, { fps: 25, disableFlip: true, videoConstraints: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } }, txt => lookup(txt), () => {}).catch(err => { $('reader').innerHTML = '<div class="msg err">Camera not available (' + esc(err && err.message || err) + '). Allow camera access for this site, or type the code below.</div>'; scanner = null; });
 }
 async function stopScan() { if (scanner) { const s = scanner; scanner = null; try { await s.stop(); } catch (e) {} try { s.clear(); } catch (e) {} } $('reader').innerHTML = ''; }
 $('mGo').onclick = () => lookup($('manual').value);
