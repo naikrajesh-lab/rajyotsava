@@ -66,8 +66,8 @@ a{color:var(--red)}
       <div class="row" style="margin-top:10px"><div><b>Kids</b><br><small id="kp"></small></div>
         <div class="step"><button data-s="k-">−</button><b id="nk">0</b><button data-s="k+">+</button></div></div>
       <div class="row" style="margin-top:16px"><span>Total to pay</span><span class="total" id="tot">₹0</span></div>
-      <a class="btn alt" id="upiBtn" href="#">Pay with a UPI app</a>
-      <p class="mute" style="margin:8px 0 0;font-size:14px">Or pay to UPI ID <b id="upiId"></b>. Then fill in the details below.</p>
+      <p class="mute" style="margin:12px 0 0;font-size:14px">Pay the exact total using any UPI app to this UPI ID, then upload the screenshot below.</p>
+      <div class="row card" style="margin:8px 0 0;padding:10px 12px"><b id="upiId" style="word-break:break-all"></b><button class="btn alt" id="copyUpi" style="width:auto;margin:0;padding:8px 14px">Copy</button></div>
       <label>Payment screenshot</label><input type="file" id="shot" accept="image/*">
       <div id="subMsg"></div>
       <button class="btn" id="subBtn">Submit for approval</button>
@@ -153,7 +153,6 @@ async function init() {
 function calc() {
   const t = na * C.adultPrice + nk * C.kidPrice;
   $('na').textContent = na; $('nk').textContent = nk; $('tot').textContent = '₹' + t;
-  $('upiBtn').href = `upi://pay?pa=${encodeURIComponent(C.upiId)}&pn=${encodeURIComponent(C.upiName)}&am=${t}&cu=INR&tn=${encodeURIComponent('Rajyotsava ' + ($('flat').value || ''))}`;
 }
 $('subForm').addEventListener('click', e => {
   const s = e.target.dataset.s; if (!s) return;
@@ -162,6 +161,7 @@ $('subForm').addEventListener('click', e => {
   calc();
 });
 $('flat').oninput = calc;
+$('copyUpi').onclick = async () => { try { await navigator.clipboard.writeText(C.upiId); $('copyUpi').textContent = 'Copied'; setTimeout(() => $('copyUpi').textContent = 'Copy', 1500); } catch (e) { prompt('Copy this UPI ID', C.upiId); } };
 
 // ---------- subscribe ----------
 function compress(file) {
