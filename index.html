@@ -130,7 +130,7 @@ let C = {}, na = 2, nk = 0, vpin = '', apin = '', filter = 'Pending', allPasses 
 async function get(q) { const r = await fetch(API + '?' + new URLSearchParams(q)); return r.json(); }
 async function post(b) { const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify(b) }); return r.json(); }
 const msg = (el, t, k) => $(el).innerHTML = t ? `<div class="msg ${k}">${esc(t)}</div>` : '';
-function qr(el, text) { el.innerHTML = ''; new QRCode(el, { text, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M }); }
+function qr(el, text) { el.innerHTML = ''; new QRCode(el, { text, width: 260, height: 260, correctLevel: QRCode.CorrectLevel.L }); }
 
 // ---------- tabs ----------
 $('nav').onclick = e => {
@@ -219,8 +219,8 @@ $('vGo').onclick = async () => {
 };
 function startScan() {
   if (scanner) return;
-  scanner = new Html5Qrcode('reader');
-  scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 220 }, txt => lookup(txt), () => {}).catch(() => { $('reader').innerHTML = '<div class="msg err">Camera not available. Type the code below.</div>'; scanner = null; });
+  scanner = new Html5Qrcode('reader', { formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE], experimentalFeatures: { useBarCodeDetectorIfSupported: true }, verbose: false });
+  scanner.start({ facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 }, advanced: [{ focusMode: 'continuous' }] }, { fps: 25, disableFlip: true }, txt => lookup(txt), () => {}).catch(() => { $('reader').innerHTML = '<div class="msg err">Camera not available. Type the code below.</div>'; scanner = null; });
 }
 async function stopScan() { if (scanner) { const s = scanner; scanner = null; try { await s.stop(); } catch (e) {} try { s.clear(); } catch (e) {} } $('reader').innerHTML = ''; }
 $('mGo').onclick = () => lookup($('manual').value);
