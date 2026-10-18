@@ -92,10 +92,12 @@ a{color:var(--red)}
       <button class="btn" id="vGo">Start scanning</button>
     </div>
     <div id="vMain" class="hide">
-      <div id="reader"></div>
-      <div class="card"><label>No camera? Type the code</label>
-        <div class="row"><input type="text" id="manual" placeholder="RJ-XXXXX" autocapitalize="characters"><button class="btn alt" id="mGo" style="width:auto;margin:0;padding:11px 16px">Find</button></div></div>
       <div id="vOut"></div>
+      <div id="vCam">
+        <div id="reader"></div>
+        <div class="card"><label>No camera? Type the code</label>
+          <div class="row"><input type="text" id="manual" placeholder="RJ-XXXXX" autocapitalize="characters"><button class="btn alt" id="mGo" style="width:auto;margin:0;padding:11px 16px">Find</button></div></div>
+      </div>
     </div>
   </section>
 
@@ -136,7 +138,7 @@ $('nav').onclick = e => {
   [...$('nav').children].forEach(b => b.classList.toggle('on', b === e.target));
   ['sub', 'pass', 'vol', 'adm'].forEach(x => $('t-' + x).classList.toggle('hide', x !== t));
   if (t !== 'vol') stopScan();
-  if (t === 'vol' && vpin) startScan();
+  if (t === 'vol' && vpin && !$('vOut').innerHTML) startScan();
 };
 
 // ---------- config ----------
@@ -220,16 +222,21 @@ function startScan() {
   scanner = new Html5Qrcode('reader');
   scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 220 }, txt => lookup(txt), () => {}).catch(() => { $('reader').innerHTML = '<div class="msg err">Camera not available. Type the code below.</div>'; scanner = null; });
 }
-function stopScan() { if (scanner) { scanner.stop().catch(() => {}); scanner = null; $('reader').innerHTML = ''; } }
+async function stopScan() { if (scanner) { const s = scanner; scanner = null; try { await s.stop(); } catch (e) {} try { s.clear(); } catch (e) {} } $('reader').innerHTML = ''; }
 $('mGo').onclick = () => lookup($('manual').value);
 async function lookup(code) {
   if (busy) return; busy = true;
-  const r = await post({ action: 'get', pin: vpin, code });
-  busy = false; showPass(r);
+  await stopScan(); $('vCam').classList.add('hide');
+  try { showPass(await post({ action: 'get', pin: vpin, code })); }
+  catch (e) { showPass({ ok: false, error: 'Network problem. Try again.' }); }
+  busy = false;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (navigator.vibrate) navigator.vibrate(150);
 }
+function next() { $('vOut').innerHTML = ''; $('manual').value = ''; $('vCam').classList.remove('hide'); startScan(); }
 let sa = 0, sk = 0, cur = null;
 function showPass(r) {
-  if (!r.ok) { $('vOut').innerHTML = `<div class="card"><div class="msg err">${esc(r.error)}</div></div>`; return; }
+  if (!r.ok) { $('vOut').innerHTML = `<div class="card"><div class="msg err">${esc(r.error)}</div><button class="btn alt" id="clr">Scan next</button></div>`; $('clr').onclick = next; return; }
   cur = r.pass; const ra = cur.adults - cur.ra, rk = cur.kids - cur.rk; sa = ra; sk = rk;
   const done = ra + rk === 0, ok = cur.status === 'Approved';
   $('vOut').innerHTML = `<div class="card">
@@ -240,13 +247,13 @@ function showPass(r) {
     <div class="row" style="margin-top:8px"><b>Kids now (max ${rk})</b><div class="step"><button data-v="k-">−</button><b id="vk">${sk}</b><button data-v="k+">+</button></div></div>
     <button class="btn ok" id="redeem">Serve breakfast</button>` : `<div class="msg err">${done ? 'Already fully redeemed' + (cur.last ? '' : '') : 'Pass is ' + esc(cur.status)}</div>`}
     <button class="btn alt" id="clr">Scan next</button></div>`;
-  $('clr').onclick = () => $('vOut').innerHTML = '';
+  $('clr').onclick = next;
   if ($('redeem')) $('redeem').onclick = async () => {
     $('redeem').disabled = true;
     const x = await post({ action: 'redeem', pin: vpin, code: cur.code, adults: sa, kids: sk });
     if (!x.ok) return showPass({ ok: false, error: x.error });
     $('vOut').innerHTML = `<div class="card"><div class="msg good">Served ${sa} adults, ${sk} kids — Flat ${esc(x.pass.flat)}</div><p class="mute">Remaining on this pass: ${x.pass.adults - x.pass.ra} adults, ${x.pass.kids - x.pass.rk} kids.</p><button class="btn alt" id="clr">Scan next</button></div>`;
-    $('clr').onclick = () => $('vOut').innerHTML = '';
+    $('clr').onclick = next;
   };
 }
 $('vOut').addEventListener('click', e => {
